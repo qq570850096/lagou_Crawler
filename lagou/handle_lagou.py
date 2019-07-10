@@ -1,5 +1,8 @@
 import re
 import requests
+import time
+import json
+import multiprocessing
 
 class handle_lagou():
     # 初始化拉勾网爬虫
@@ -34,30 +37,49 @@ class handle_lagou():
                     "pn":i,
                     "kd":"python",
                 }
-                page_url = "https://www.lagou.com/jobs/pisitionAjax.json?city=%s&needAddtionalResult=false"%city
+                page_url = "https://www.lagou.com/jobs/positionAjax.json?city=%s&needAddtionalResult=false"%city
                 refer_url = "https://www.lagou.com/jobs/list_python?city=%s&cl=false&fromSearch=true&labelWords=&suginput="%city
                 self.header['Referer'] = refer_url.encode()
-                response = self.handle_request(method="POST",url=page_url,data=data)
-                print(response)
+                response = self.handle_request(method="POST",url=page_url,data=data, info=city)
+                lagou_data = json.loads(response)
+                job_list = lagou_data['content']['positionResult']['result']
+                for job in job_list:
+                    print(job)
 
     # 定义获取方法
     def handle_request(self, method, url, data=None, info=None):
-        if method=="GET":
-            response = self.session.get(url=url, headers=self.header)
+        # 遇到操作频繁的时候需要重复请求
+        while True:
+            if method=="GET":
+                response = self.session.get(url=url, headers=self.header)
 
-        elif method=="POST":
-            response=self.session.post(url=url, headers=self.header, data=data)
+            elif method=="POST":
+                response=self.session.post(url=url, headers=self.header, data=data)
 
-        response.encoding = 'utf-8'
-        return response.text
+            response.encoding = 'utf-8'
+            if "频繁" in response.text:
+                print("请求频繁")
+                # 需要先清除cookies信息再重新获取
+                self.session.cookies.clear()
+                first_request_url = "https://www.lagou.com/jobs/list_python?city=%s&cl=false&fromSearch=true&labelWords=&suginput=" %info
+                first_response = self.handle_request(method="GET", url=first_request_url)
+                time.sleep(10)
+                continue
+            return response.text
 
 
 if __name__ == '__main__':
     lagou = handle_lagou()
     # 获取所有城市
     lagou.handle_city()
-    print(lagou.city_list)
+
+    #创建一个进程池
+    pool = multiprocessing.Pool(2)
+
+    # 通过多进程的方法加速抓取
     for city in lagou.city_list:
-        lagou.handle_city_job(city)
-        break
+        pool.apply_async(lagou.handle_city_job, args=(city,))
+
+    pool.close()
+    pool.join()
 
