@@ -4,6 +4,8 @@ import time
 import json
 import multiprocessing
 
+from lagou.handle_insert_data import lagou_mysql
+
 class handle_lagou():
     # 初始化拉勾网爬虫
     def __init__(self):
@@ -16,10 +18,11 @@ class handle_lagou():
 
     # 获取全部城市
     def handle_city(self):
-        city_comp = re.compile(r'zhaopin/">(.*?)</a>')
+        city_comp = re.compile(r'www\.lagou\.com\/.*\/">(.*?)</a>')
         city_url = "https://www.lagou.com/jobs/allCity.html"
         city_result = self.handle_request(method="GET", url=city_url)
-        self.city_list=city_comp.findall(city_result)
+
+        self.city_list=set(city_comp.findall(city_result))
         self.session.cookies.clear()
 
     def handle_city_job(self, city):
@@ -45,17 +48,26 @@ class handle_lagou():
                 job_list = lagou_data['content']['positionResult']['result']
                 for job in job_list:
                     print(job)
+                    lagou_mysql.insert_item(job)
 
     # 定义获取方法
     def handle_request(self, method, url, data=None, info=None):
         # 遇到操作频繁的时候需要重复请求
         while True:
-            if method=="GET":
-                response = self.session.get(url=url, headers=self.header)
+            try:
+                if method=="GET":
+                    response = self.session.get(url=url, headers=self.header)
 
-            elif method=="POST":
-                response=self.session.post(url=url, headers=self.header, data=data)
-
+                elif method=="POST":
+                    response=self.session.post(url=url, headers=self.header, data=data)
+            except:
+                # 需要先清除cookies信息
+                self.session.cookies.clear()
+                # 重新获取cookies信息
+                first_request_url = "https://www.lagou.com/jobs/list_python?city=%s&cl=false&fromSearch=true&labelWords=&suginput=" % info
+                self.handle_request(method="GET", url=first_request_url)
+                time.sleep(10)
+                continue
             response.encoding = 'utf-8'
             if "频繁" in response.text:
                 print("请求频繁")
@@ -74,12 +86,14 @@ if __name__ == '__main__':
     lagou.handle_city()
 
     #创建一个进程池
-    pool = multiprocessing.Pool(2)
+    # pool = multiprocessing.Pool(2)
 
     # 通过多进程的方法加速抓取
     for city in lagou.city_list:
-        pool.apply_async(lagou.handle_city_job, args=(city,))
+        print(city)
+        lagou.handle_city_job(city)
 
-    pool.close()
-    pool.join()
+
+    # pool.close()
+    # pool.join()
 
