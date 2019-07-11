@@ -19,7 +19,7 @@ class Lagoutables(Base):
     #id,设置为主键和自动增长
     id = Column(Integer,primary_key=True,autoincrement=True)
     #岗位ID,非空字段
-    positionID = Column(Integer,nullable=True)
+    positionID = Column(Integer,nullable=True,unique=True)
     # 经度
     longitude = Column(Float, nullable=False)
     # 纬度

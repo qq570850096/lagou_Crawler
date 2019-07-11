@@ -11,8 +11,8 @@ class HandleLagouData(object):
     def __init__(self):
         #实例化session信息
         self.mysql_session = Session()
-        # self.date = time.strftime("%Y-%m-%d",time.localtime())
-        self.date = '2019-07-10'
+        self.date = time.strftime("%Y-%m-%d",time.localtime())
+        # self.date = '2019-07-10'
 
     #数据的存储方法
     def insert_item(self,item):
