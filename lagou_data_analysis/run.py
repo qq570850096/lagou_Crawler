@@ -8,9 +8,11 @@ from lagou.handle_insert_data import lagou_mysql
 app = Flask(__name__)
 
 # 注册路由
-@app.route("/")
+@app.route("/",methods=['GET','POST'])
 def index():
-    return "Hello World"
+    result = lagou_mysql.count_result()
+    return render_template('index.html', result=result)
+
 
 @app.route("/get_echart_data")
 def get_echart_data():
@@ -35,11 +37,7 @@ def get_echart_data():
     info['map'] = lagou_mysql.query_city_result()
     return jsonify(info)
 
-@app.route("/lagou/",methods=['GET','POST'])
-def lagou():
-    # 库内数据总量，今日抓取量
-    result = lagou_mysql.count_result()
-    return render_template('index.html',result=result)
+
 
 if __name__ == '__main__':
     # 启动flask

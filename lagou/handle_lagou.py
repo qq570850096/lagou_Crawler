@@ -52,14 +52,20 @@ class handle_lagou():
 
     # 定义获取方法
     def handle_request(self, method, url, data=None, info=None):
+        proxy_http = "http://%s:%s@%s:%s"%('H16V841F925QY10P', 'BA4052012B735F7C', 'http-pro.abuyun.com', '9010')
+        proxy = {
+            'http':proxy_http,
+            'https':proxy_http
+        }
         # 遇到操作频繁的时候需要重复请求
+
         while True:
             try:
                 if method=="GET":
-                    response = self.session.get(url=url, headers=self.header)
+                    response = self.session.get(url=url, headers=self.header, proxies=proxy, timeout=6)
 
                 elif method=="POST":
-                    response=self.session.post(url=url, headers=self.header, data=data)
+                    response=self.session.post(url=url, headers=self.header, data=data, proxies=proxy, timeout=6)
             except:
                 # 需要先清除cookies信息
                 self.session.cookies.clear()
@@ -74,7 +80,7 @@ class handle_lagou():
                 # 需要先清除cookies信息再重新获取
                 self.session.cookies.clear()
                 first_request_url = "https://www.lagou.com/jobs/list_python?city=%s&cl=false&fromSearch=true&labelWords=&suginput=" %info
-                first_response = self.handle_request(method="GET", url=first_request_url)
+                self.handle_request(method="GET",url=first_request_url)
                 time.sleep(10)
                 continue
             return response.text
@@ -86,14 +92,13 @@ if __name__ == '__main__':
     lagou.handle_city()
 
     #创建一个进程池
-    # pool = multiprocessing.Pool(2)
+    pool = multiprocessing.Pool(2)
 
     # 通过多进程的方法加速抓取
     for city in lagou.city_list:
         print(city)
-        lagou.handle_city_job(city)
+        pool.apply_async(lagou.handle_city_job(city))
 
-
-    # pool.close()
-    # pool.join()
+    pool.close()
+    pool.join()
 
